@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .model-container {
+            display: flex;
+            height: 100vh;
+            background: white;
+        }
+
+        .model-library {
+            width: 50%;
+            padding: 20px;
+            border-right: 1px solid #eee;
+            overflow-y: auto;
+        }
+
+        .hierarchy-section {
+            width: 50%;
+            padding: 20px;
+            border-left: 1px solid #eee;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .model-card {
+            background: #1890ff;
+            color: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .hierarchy-level {
+            margin-bottom: 20px;
+        }
+
+        .drop-area {
+            background: #f0f2f5;
+            border: 2px dashed #ccc;
+            padding: 10px;
+            border-radius: 4px;
+            min-height: 100px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .drop-area h3 {
+            margin-top: 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .modal-body input,
+        .modal-body textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .modal-body button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .modal-body input[type="file"] {
+            margin-bottom: 20px;
+        }
+
+        .delete-area {
+            background: #ff4d4f;
+            color: white;
+            border: 2px dashed #ff7875;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            min-height: 50px;
+        }
+
+        .input-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+
+        .input-modal input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .input-modal button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .newmodel {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="model-container">
+        <!-- 模型库区域 -->
+        <div class="model-library">
+            <div class="library-header">
+                <h2>模型库</h2>
+                <div class="action-buttons">
+                    <button class="btn-primary" id="addLevelButton">添加层级</button>
+                    <button class="btn-primary" id="uploadButton">+上传</button>
+                    <button class="btn-primary" id="addmodelButton">新增</button>
+                </div>
+            </div>
+            <div class="model-list" id="modelList">
+                <!-- 模型库列表动态加载 -->
+            </div>
+            <!-- 删除按钮区域 -->
+            <div class="delete-area" id="deleteArea">
+                <h3>将模型拖到此处删除</h3>
+            </div>
+        </div>
+
+        <!-- 层级管理区域 -->
+        <div class="hierarchy-section" id="hierarchySection">
+            <!-- 层级内容动态添加 -->
+        </div>
+    </div>
+
+    <!-- 增加模型框 -->
+    <div class="newmodel">
+        <div class="modal-body">
+            <label for="projectName">模型名称:</label>
+            <input type="text" class="newName" placeholder="请输入模型名称">
+            <label for="textInfo">模型地址:</label>
+            <input type="text" class="newurl" placeholder="请输入模型地址">
+            <button class="submit">提交</button>
+            <button onclick="closenewModal()">关闭</button>
+        </div>
+    </div>
+    <!-- 上传模态框 -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>上传项目</h2>
+                <button class="modal-close" id="closeModal"></button>
+            </div>
+            <div class="modal-body">
+                <label for="projectName">项目名称:</label>
+                <input type="text" id="projectName" placeholder="请输入项目名称">
+
+                <label for="textInfo">文本信息:</label>
+                <textarea id="textInfo" rows="4" placeholder="请输入文本信息"></textarea>
+
+                <label for="fileUpload">上传图片:</label>
+                <input type="file" id="fileUpload">
+
+                <button id="submitUpload">提交上传</button>
+                <button id="canselUpload" onclick="closeUploadModal()">取消上传</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="input-modal" class="input-modal">
+        <h3>编辑层级信息</h3>
+        <input type="number" id="input-weight" placeholder="请输入权重" />
+        <textarea id="input-text" rows="4" placeholder="请输入文本信息"></textarea>
+        <button class="submit">提交</button>
+        <button onclick="closeInputModal()">关闭</button>
+    </div>
+
+    <script>
+
+        const data = {
+            "image": "",
+            "content": "测试",
+            "modelList": [
+                {
+                    "modelName": "openai",
+                    "modelUrl": "https://openai.com/"
+                },
+                {
+                    "modelName": "deepseek",
+                    "modelUrl": "https://www.deepseek.com/zh",
+                },
+                {
+                    "modelName": "腾讯元宝",
+                    "modelUrl": "https://yuanbao.tencent.com/chat/naQivTmsDa",
+                }
+            ]
+        };
+
+
+        let leveldata = {
+            "image": "",
+            "content": "测试",
+            "modelList": []
+        };
+        let layer = []
+        class Model {
+            constructor(modelName, modelUrl, weight, inform) {
+                this.modelName = modelName;
+                this.modelUrl = modelUrl;
+                this.weight = weight;
+                this.inform = inform;
+            }
+
+            // 获取模型数据
+            getModelData() {
+                return {
+                    modelName: this.modelName,
+                    modelUrl: this.modelUrl,
+                    weight: this.weight,
+                    inform: this.inform
+                };
+            }
+        }
+
+        // Layer类，用于组织模型
+        class Layer {
+            constructor(layer, parallel) {
+                this.layer = layer;
+                this.parallel = parallel;
+                this.models = [];  // 初始化模型数组
+            }
+            // 获取层级数据
+            getLayerData() {
+                return {
+                    layer: this.layer,
+                    parallel: this.parallel,
+                    models: this.models
+                };
+            }
+        }
+
+        const inputmodal = document.querySelector('.input-modal')
+        //动态渲染模型库
+        function render() {
+            const list = document.querySelector('.model-list');
+            //防止重复渲染
+            list.innerHTML = ""
+            data.modelList.forEach(model => {
+                const newdiv = document.createElement('div')
+                newdiv.classList.add('model-card');
+                newdiv.innerHTML = `${model.modelName}`;
+                newdiv.id = `${model.modelName}`;
+                newdiv.setAttribute('draggable', 'true');
+                newdiv.setAttribute('data-url', `${model.modelUrl}`);
+                list.appendChild(newdiv);
+                abledrag()
+            });
+        }
+
+        render();
+        // 显示上传模态框
+        function showUploadModal() {
+            const modal = document.getElementById('uploadModal');
+            modal.style.display = 'flex';
+        }
+
+        //关闭新增模型框
+        function closenewModal() {
+            newmodel.style.display = 'none';
+        }
+
+        // 关闭上传模态框
+        function closeUploadModal() {
+            const modal = document.getElementById('uploadModal');
+            modal.style.display = 'none';
+        }
+
+        // 上传表单提交
+        function handleUploadSubmit() {
+            const projectName = document.getElementById('projectName').value;
+            const textInfo = document.getElementById('textInfo').value;
+            const fileInput = document.getElementById('fileUpload');
+            const file = fileInput.files[0];
+
+            if (!projectName || !textInfo || !file) {
+                alert('请填写完整信息并上传图片！');
+                return;
+            }
+            // 关闭模态框
+            closeUploadModal();
+
+            // 清空表单内容
+            document.getElementById('projectName').value = '';
+            document.getElementById('textInfo').value = '';
+            fileInput.value = '';
+        }
+        let i = 0;
+        const Layerfatory = new Layer()
+        // 添加层级功能
+        function addHierarchyLevel() {
+            i++;
+            const hierarchySection = document.getElementById('hierarchySection');
+            const newLevel = document.createElement('div');
+            newLevel.classList.add('hierarchy-level');
+            newLevel.innerHTML = `
+                <div class="drop-area" id="dropArea">
+                    <h3>层级${i}</h3>
+                    <p>拖动左侧的模型到这里</p>
+                </div>
+            `;
+            newLevel.setAttribute('data-order', i);
+            console.log(newLevel.dataset.order);
+
+            hierarchySection.appendChild(newLevel);
+            // 绑定拖拽事件
+            makeAreaDraggable(newLevel);
+            Layupdata(i, 0);
+        }
+        //增加新模型
+        const newmodel = document.querySelector('.newmodel');
+        const addmodelButton = document.getElementById('addmodelButton');
+
+        addmodelButton.addEventListener('click', function () {
+            newmodel.style.display = "block";
+
+            newmodel.querySelector('.submit').addEventListener('click', function () {
+                // 获取用户输入的模型名称和URL
+                const modelName = newmodel.querySelector('.newName').value;
+                const modelUrl = newmodel.querySelector('.newurl').value;
+                // 创建新模型对象
+                const newModel = {
+                    "modelName": modelName,
+                    "modelUrl": modelUrl
+                };
+                data.modelList.push(newModel);
+                closenewModal();
+                render();
+            });
+        });
+
+        // 使区域可拖拽
+        function makeAreaDraggable(dropArea) {
+            dropArea.addEventListener('dragover', function (event) {
+                event.preventDefault();
+                dropArea.style.background = '#e0e0e0';
+            });
+
+            dropArea.addEventListener('dragleave', function () {
+                dropArea.style.background = '#f0f2f5';
+            });
+
+            dropArea.addEventListener('drop', function (event) {
+                event.preventDefault();
+                //获取拖拽元素的数据
+                const modelId = event.dataTransfer.getData('text');
+                //依据数据找到元素
+                const modelElement = document.getElementById(modelId);
+                if (modelElement) {
+                    // 克隆模型并放入目标区域
+                    const clonedModel = modelElement.cloneNode(true);
+                    //自定义属性用来区分不同层级的模型
+                    clonedModel.id = modelId + `(${dropArea.dataset.order})`;
+                    clonedModel.addEventListener('dragstart', function (event) {
+                        event.dataTransfer.setData('text', clonedModel.id);
+                    });
+                    dropArea.firstElementChild.append(clonedModel);
+                    dropArea.style.background = '#f0f2f5';
+                    //监听输入权重和文本 
+                    clonedModel.addEventListener('click', function () {
+                        inputmodal.style.display = "block"
+                        const submit = document.querySelector('.submit')
+                        submit.addEventListener('click', function (event) {
+                            //防止事件冒泡
+                            event.stopPropagation();
+                            clonedModel.setAttribute('data-weight', inputmodal.children[1].value)
+                            clonedModel.setAttribute('data-inform', inputmodal.children[2].value)
+                            inputmodal.style.display = 'none';
+                            //更新权重
+                            let Modelfactory = new Model(clonedModel.innerText, clonedModel.dataset.url, clonedModel.dataset.weight, clonedModel.dataset.inform)
+                            layer[dropArea.dataset.order - 1].models.push(Modelfactory)
+                        })
+                    })
+                    let Modelfactory = new Model(clonedModel.innerText, clonedModel.dataset.url, clonedModel.dataset.weight, clonedModel.dataset.inform)
+                    layer[dropArea.dataset.order - 1].models.push(Modelfactory)
+                }
+            });
+        }
+
+        //创建层级
+        function Layupdata(index, parallel) {
+            let Layerfatory = new Layer(index, parallel);
+            layer[index - 1] = Layerfatory.getLayerData();
+        }
+
+        //关闭弹窗
+        function closeInputModal() {
+            inputmodal.style.display = 'none';
+        }
+
+        // 给模型库中的每个模型添加拖拽功能
+        function abledrag() {
+            const models = document.querySelectorAll('.model-card');
+            models.forEach(model => {
+                model.addEventListener('dragstart', function (event) {
+                    event.dataTransfer.setData('text', model.id);
+                });
+            });
+        }
+
+        // 删除模型功能
+        function handleDeleteModel(event) {
+            const modelId = event.dataTransfer.getData('text')
+            const modelElement = document.getElementById(modelId);
+            if (modelElement) {
+                // 删除模型
+                modelElement.remove();
+            }
+        }
+        // 初始化(当页面完全加载并渲染完成后)
+        window.onload = function () {
+            // 添加事件监听器
+            const uploadButton = document.getElementById('uploadButton');
+            const closeModalButton = document.getElementById('closeModal');
+            const submitUploadButton = document.getElementById('submitUpload');
+            const addLevelButton = document.getElementById('addLevelButton');
+
+            uploadButton.addEventListener('click', showUploadModal);
+            closeModalButton.addEventListener('click', closeUploadModal);
+            submitUploadButton.addEventListener('click', handleUploadSubmit);
+            addLevelButton.addEventListener('click', addHierarchyLevel);
+            abledrag()
+
+            // 给删除区域添加拖拽事件
+            const deleteArea = document.getElementById('deleteArea');
+            deleteArea.addEventListener('dragover', function (event) {
+                event.preventDefault();
+                deleteArea.style.background = '#ff7875';
+            });
+
+            deleteArea.addEventListener('dragleave', function () {
+                deleteArea.style.background = '#ff4d4f';
+            });
+
+            deleteArea.addEventListener('drop', handleDeleteModel);
+        };
+
+        const submitUpload = document.getElementById('submitUpload')
+        submitUpload.addEventListener('click', function () {
+            //将数据汇合
+            leveldata.modelList = layer;
+            leveldata.content = document.getElementById('textInfo').value
+            //更新是否串行
+            leveldata.modelList.forEach(element => {
+                if (element.models.length > 1) {
+                    element.parallel = 1
+                }
+            });
+            const fileInput = document.getElementById('fileUpload');
+            const file = fileInput.files[0];  // 获取上传的文件
+            if (file) {
+                leveldata.image = file.name;
+            } else {
+                alert('请选择一个文件');
+            }
+
+            fetch('http://localhost:3000/api/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(leveldata)
+            })
+                .then(response => response.json())
+                .then(result => {
+                    console.log('Success:', result);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+        });
+
+
+    </script>
+</body>
+
+</html>
